@@ -5,6 +5,9 @@ dist
 tmp
 out-tsc
 
+# generated Prisma client (regenerated via `npx prisma generate`)
+**/generated/prisma
+
 # dependencies
 node_modules
 
