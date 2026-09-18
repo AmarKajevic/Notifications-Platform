@@ -11,6 +11,12 @@
     },
     {
       "path": "./gateway"
+    },
+    {
+      "path": "./libs/contracts"
+    },
+    {
+      "path": "./libs/kafka"
     }
   ],
   "compilerOptions": {}
