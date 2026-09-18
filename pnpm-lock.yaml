@@ -151,6 +151,12 @@ importers:
         specifier: ^5.2.1
         version: 5.2.6(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)(webpack-cli@7.2.3)(webpack@5.111.0)
 
+  libs/contracts:
+    dependencies:
+      tslib:
+        specifier: ^2.3.0
+        version: 2.8.1
+
   libs/database:
     dependencies:
       '@nestjs/common':
@@ -159,6 +165,12 @@ importers:
       '@prisma/adapter-pg':
         specifier: ^7.10.0
         version: 7.10.0
+      tslib:
+        specifier: ^2.3.0
+        version: 2.8.1
+
+  libs/kafka:
+    dependencies:
       tslib:
         specifier: ^2.3.0
         version: 2.8.1
