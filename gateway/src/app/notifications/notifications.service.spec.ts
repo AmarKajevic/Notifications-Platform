@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '@org/database';
-import { KafkaService } from '@org/kafka';
 import { NotificationsService } from './notifications.service';
 
 // The real @org/database pulls in Prisma's generated (ESM-only) client, which
@@ -10,23 +9,18 @@ jest.mock('@org/database', () => ({
   PrismaService: class {},
 }));
 
-// @org/kafka's KafkaModule imports @nestjs/config, which ships ESM-only
-// (no CJS build), so jest's CommonJS transform can't load it either. Unit
-// tests don't need a real Kafka client, so mock the module and inject a
-// fake KafkaService below.
-jest.mock('@org/kafka', () => ({
-  KafkaService: class {},
-}));
-
 describe('NotificationsService', () => {
   let service: NotificationsService;
-  const prisma = {
+  const tx = {
     notification: {
       create: jest.fn(),
     },
+    outboxEvent: {
+      create: jest.fn(),
+    },
   };
-  const kafka = {
-    publish: jest.fn(),
+  const prisma = {
+    $transaction: jest.fn((callback: (tx: unknown) => unknown) => callback(tx)),
   };
   const createdNotification = {
     id: 'test-id',
@@ -39,14 +33,14 @@ describe('NotificationsService', () => {
   };
 
   beforeEach(async () => {
-    prisma.notification.create.mockReset();
-    kafka.publish.mockReset();
+    tx.notification.create.mockReset();
+    tx.outboxEvent.create.mockReset();
+    prisma.$transaction.mockClear();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
-        { provide: KafkaService, useValue: kafka },
       ],
     }).compile();
 
@@ -57,9 +51,9 @@ describe('NotificationsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('writes a pending notification and returns its id and status', async () => {
-    prisma.notification.create.mockResolvedValue(createdNotification);
-    kafka.publish.mockResolvedValue(undefined);
+  it('writes a pending notification and a matching outbox event in the same transaction', async () => {
+    tx.notification.create.mockResolvedValue(createdNotification);
+    tx.outboxEvent.create.mockResolvedValue({});
 
     const result = await service.create({
       channel: 'EMAIL',
@@ -67,7 +61,7 @@ describe('NotificationsService', () => {
       payload: { subject: 'hi' },
     });
 
-    expect(prisma.notification.create).toHaveBeenCalledWith({
+    expect(tx.notification.create).toHaveBeenCalledWith({
       data: {
         tenantId: 'demo-tenant',
         channel: 'EMAIL',
@@ -75,28 +69,34 @@ describe('NotificationsService', () => {
         payload: { subject: 'hi' },
       },
     });
-    expect(kafka.publish).toHaveBeenCalledWith(
-      'notification.requested',
-      expect.objectContaining({
-        notificationId: 'test-id',
-        tenantId: 'demo-tenant',
-        channel: 'EMAIL',
-        recipient: 'user@example.com',
-      }),
-    );
+    expect(tx.outboxEvent.create).toHaveBeenCalledWith({
+      data: {
+        topic: 'notification.requested',
+        payload: expect.objectContaining({
+          notificationId: 'test-id',
+          tenantId: 'demo-tenant',
+          channel: 'EMAIL',
+          recipient: 'user@example.com',
+        }),
+      },
+    });
     expect(result).toEqual({ id: 'test-id', status: 'PENDING' });
   });
 
-  it('still returns the notification even if the Kafka publish fails', async () => {
-    prisma.notification.create.mockResolvedValue(createdNotification);
-    kafka.publish.mockRejectedValue(new Error('broker unreachable'));
+  it('never writes the outbox event if the notification insert fails', async () => {
+    tx.notification.create.mockRejectedValue(new Error('db unavailable'));
+    prisma.$transaction.mockImplementationOnce(async (callback) =>
+      callback(tx),
+    );
 
-    const result = await service.create({
-      channel: 'EMAIL',
-      recipient: 'user@example.com',
-      payload: { subject: 'hi' },
-    });
+    await expect(
+      service.create({
+        channel: 'EMAIL',
+        recipient: 'user@example.com',
+        payload: { subject: 'hi' },
+      }),
+    ).rejects.toThrow('db unavailable');
 
-    expect(result).toEqual({ id: 'test-id', status: 'PENDING' });
+    expect(tx.outboxEvent.create).not.toHaveBeenCalled();
   });
 });
