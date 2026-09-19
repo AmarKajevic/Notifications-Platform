@@ -19,9 +19,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
   }
 
   async publish<T>(topic: string, payload: T): Promise<void> {
-    await lastValueFrom(
-      this.client.emit(topic, payload),
-    );
+    await lastValueFrom(this.client.emit(topic, payload));
   }
 
   async onModuleDestroy(): Promise<void> {
