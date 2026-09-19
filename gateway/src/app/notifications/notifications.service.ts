@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService, Prisma, NotificationStatus } from '@org/database';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import {
-  KafkaService,
-} from '@org/kafka';
+import { KafkaService } from '@org/kafka';
 import { NotificationRequestedEvent } from '@org/contracts';
 import { randomUUID } from 'node:crypto';
 
@@ -11,8 +9,10 @@ import { randomUUID } from 'node:crypto';
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService,
-     private readonly kafka: KafkaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly kafka: KafkaService,
+  ) {}
 
   async create(
     dto: CreateNotificationDto,
@@ -35,7 +35,7 @@ export class NotificationsService {
       payload: notification.payload as Record<string, unknown>,
       createdAt: notification.createdAt.toISOString(),
     };
-     try {
+    try {
       await this.kafka.publish('notification.requested', event);
     } catch (error) {
       this.logger.error(
