@@ -3,8 +3,8 @@ import { AppController } from './app.controller';
 import { ConfigModule } from '@nestjs/config';
 import { AppService } from './app.service';
 import { DatabaseModule } from '@org/database';
-import { KafkaModule } from '@org/kafka';
 import { NotificationsModule } from './notifications/notifications.module';
+import { OutboxModule } from './outbox/outbox.module';
 
 @Module({
   imports: [
@@ -12,8 +12,8 @@ import { NotificationsModule } from './notifications/notifications.module';
       isGlobal: true,
     }),
     DatabaseModule,
-    KafkaModule,
     NotificationsModule,
+    OutboxModule,
   ],
   controllers: [AppController],
   providers: [AppService],
