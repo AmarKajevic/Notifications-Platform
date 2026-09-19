@@ -3,4 +3,4 @@ services:
     image: apache/kafka:4.3.1
     container_name: notification-kafka
     ports:
-      - "9092:9092"
+      - '9092:9092'

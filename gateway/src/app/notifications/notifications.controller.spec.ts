@@ -2,11 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 
-// notifications.service.ts imports @org/database, which pulls in Prisma's
-// generated (ESM-only) client — mock it so this controller test never has to
-// load it (see notifications.service.spec.ts for the same reasoning).
+// notifications.service.ts imports @org/database and @org/kafka, which pull
+// in ESM-only packages (Prisma's generated client, @nestjs/config) that
+// jest's CommonJS transform can't load — mock both so this controller test
+// never has to load them (see notifications.service.spec.ts for the same
+// reasoning).
 jest.mock('@org/database', () => ({
   PrismaService: class {},
+}));
+jest.mock('@org/kafka', () => ({
+  KafkaService: class {},
 }));
 
 describe('NotificationsController', () => {
