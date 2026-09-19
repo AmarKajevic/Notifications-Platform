@@ -38,3 +38,23 @@ model Notification {
   @@index([status])
   @@index([createdAt])
 }
+
+enum OutboxEventStatus {
+  PENDING
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+model OutboxEvent {
+  id          String            @id @default(uuid())
+  topic       String
+  payload     Json
+  status      OutboxEventStatus @default(PENDING)
+  attempts    Int               @default(0)
+  lastError   String?
+  createdAt   DateTime          @default(now())
+  publishedAt DateTime?
+
+  @@index([status, createdAt])
+}
