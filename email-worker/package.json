@@ -80,12 +80,18 @@
   "dependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/microservices": "^11.2.5",
     "@nestjs/platform-express": "^11.0.0",
+    "@org/contracts": "workspace:*",
+    "@org/database": "workspace:*",
+    "dotenv": "^17.4.2",
+    "nodemailer": "^10.0.10",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.0.0"
+    "@nestjs/testing": "^11.0.0",
+    "@types/nodemailer": "^8.0.2"
   }
 }
