@@ -17,6 +17,12 @@
     },
     {
       "path": "./libs/kafka"
+    },
+    {
+      "path": "./email-worker-e2e"
+    },
+    {
+      "path": "./email-worker"
     }
   ],
   "compilerOptions": {}

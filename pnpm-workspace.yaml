@@ -1,6 +1,8 @@
 packages:
   - 'packages/*'
   - 'libs/*'
+  - 'email-worker'
+  - 'email-worker-e2e'
 allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
