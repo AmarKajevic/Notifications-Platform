@@ -4,22 +4,22 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import type { NotificationRequestedEvent } from '@org/contracts';
 import { PrismaService } from '@org/database';
 
-import { EmailService } from './email.service';
+import { WebhookService } from './webhook.service';
 
 @Controller()
-export class EmailController {
-  private readonly logger = new Logger(EmailController.name);
+export class WebhookController {
+  private readonly logger = new Logger(WebhookController.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService,
+    private readonly webhookService: WebhookService,
   ) {}
 
   @EventPattern('notification.requested')
   async handleNotification(
     @Payload() event: NotificationRequestedEvent,
   ): Promise<void> {
-    if (event.channel !== 'EMAIL') {
+    if (event.channel !== 'WEBHOOK') {
       return;
     }
 
@@ -57,7 +57,7 @@ export class EmailController {
         },
       });
 
-      await this.emailService.sendEmail(event.recipient, event.payload);
+      await this.webhookService.sendWebhook(event.recipient, event.payload);
 
       await this.prisma.notification.update({
         where: {
@@ -70,12 +70,12 @@ export class EmailController {
         },
       });
 
-      this.logger.log(`Notification ${notificationId} delivered`);
+      this.logger.log(`Webhook notification ${notificationId} delivered`);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unknown email delivery error';
+        error instanceof Error ? error.message : 'Unknown webhook error';
 
-      this.logger.error(`Failed notification ${notificationId}: ${message}`);
+      this.logger.error(`Webhook notification ${notificationId} failed: ${message}`);
 
       await this.recordFailure(notificationId, message).catch((updateError) => {
         this.logger.error(
