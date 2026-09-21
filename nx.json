@@ -54,8 +54,7 @@
       "exclude": [
         "gateway-e2e/**/*",
         "email-worker-e2e/**/*",
-        "retry-scheduler-e2e/**/*",
-        "webhook-worker-e2e/**/*"
+        "retry-scheduler-e2e/**/*"
       ]
     }
   ],

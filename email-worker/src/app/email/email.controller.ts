@@ -19,10 +19,6 @@ export class EmailController {
   async handleNotification(
     @Payload() event: NotificationRequestedEvent,
   ): Promise<void> {
-    if (event.channel !== 'EMAIL') {
-      return;
-    }
-
     const { notificationId } = event;
 
     try {
