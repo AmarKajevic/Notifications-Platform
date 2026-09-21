@@ -90,8 +90,11 @@ describe('EmailController', () => {
     expect(prisma.notification.update).not.toHaveBeenCalled();
   });
 
-  it('marks the notification FAILED without throwing when sending fails', async () => {
-    prisma.notification.findUnique.mockResolvedValue({ status: 'PENDING' });
+  it('schedules a backoff retry without throwing when attempts remain', async () => {
+    prisma.notification.findUnique.mockResolvedValue({
+      status: 'PENDING',
+      attempts: 2,
+    });
     prisma.notification.update.mockResolvedValue({});
     emailService.sendEmail.mockRejectedValue(new Error('smtp unreachable'));
 
@@ -99,7 +102,42 @@ describe('EmailController', () => {
 
     expect(prisma.notification.update).toHaveBeenNthCalledWith(2, {
       where: { id: 'notification-1' },
-      data: { status: 'FAILED', lastError: 'smtp unreachable' },
+      data: {
+        status: 'RETRYING',
+        lastError: 'smtp unreachable',
+        nextRetryAt: expect.any(Date),
+      },
     });
+  });
+
+  it('permanently fails without throwing once retry attempts are exhausted', async () => {
+    prisma.notification.findUnique.mockResolvedValue({
+      status: 'PENDING',
+      attempts: 6,
+    });
+    prisma.notification.update.mockResolvedValue({});
+    emailService.sendEmail.mockRejectedValue(new Error('smtp unreachable'));
+
+    await expect(controller.handleNotification(event)).resolves.toBeUndefined();
+
+    expect(prisma.notification.update).toHaveBeenNthCalledWith(2, {
+      where: { id: 'notification-1' },
+      data: {
+        status: 'FAILED',
+        lastError: 'smtp unreachable',
+        nextRetryAt: null,
+      },
+    });
+  });
+
+  it('does not throw when recording the failure itself fails', async () => {
+    prisma.notification.findUnique.mockResolvedValue({
+      status: 'PENDING',
+      attempts: 6,
+    });
+    prisma.notification.update.mockRejectedValue(new Error('db unavailable'));
+    emailService.sendEmail.mockRejectedValue(new Error('smtp unreachable'));
+
+    await expect(controller.handleNotification(event)).resolves.toBeUndefined();
   });
 });

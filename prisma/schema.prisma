@@ -16,6 +16,7 @@ enum NotificationChannel {
 enum NotificationStatus {
   PENDING
   PROCESSING
+  RETRYING
   DELIVERED
   FAILED
 }

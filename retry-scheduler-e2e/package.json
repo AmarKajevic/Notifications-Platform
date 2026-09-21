@@ -1,0 +1,26 @@
+{
+  "name": "@org/retry-scheduler-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@org/retry-scheduler"
+    ],
+    "targets": {
+      "e2e": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "dependsOn": [
+          "@org/retry-scheduler:build",
+          "@org/retry-scheduler:serve"
+        ],
+        "options": {
+          "jestConfig": "retry-scheduler-e2e/jest.config.cts",
+          "passWithNoTests": true
+        }
+      }
+    }
+  }
+}

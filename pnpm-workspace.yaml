@@ -3,6 +3,8 @@ packages:
   - 'libs/*'
   - 'email-worker'
   - 'email-worker-e2e'
+  - 'retry-scheduler'
+  - 'retry-scheduler-e2e'
 allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
