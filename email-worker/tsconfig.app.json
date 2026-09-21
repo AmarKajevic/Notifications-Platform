@@ -23,10 +23,13 @@
   ],
   "references": [
     {
-      "path": "../libs/contracts/tsconfig.lib.json"
+      "path": "../libs/kafka/tsconfig.lib.json"
     },
     {
       "path": "../libs/database/tsconfig.lib.json"
+    },
+    {
+      "path": "../libs/contracts/tsconfig.lib.json"
     }
   ]
 }
