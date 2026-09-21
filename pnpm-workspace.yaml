@@ -5,6 +5,8 @@ packages:
   - 'email-worker-e2e'
   - 'retry-scheduler'
   - 'retry-scheduler-e2e'
+  - 'webhook-worker'
+  - 'webhook-worker-e2e'
 allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '@org/database';
-import { EmailController } from './email.controller';
-import { EmailService } from './email.service';
+import { WebhookController } from './webhook.controller';
+import { WebhookService } from './webhook.service';
 
 // @org/database pulls in Prisma's generated (ESM-only) client, which jest's
 // CommonJS transform can't load. Unit tests don't need a real DB, so mock
@@ -10,23 +10,22 @@ jest.mock('@org/database', () => ({
   PrismaService: class {},
 }));
 
-describe('EmailController', () => {
-  let controller: EmailController;
+describe('WebhookController', () => {
+  let controller: WebhookController;
   const prisma = {
     notification: {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
   };
-  const emailService = {
-    sendEmail: jest.fn(),
+  const webhookService = {
+    sendWebhook: jest.fn(),
   };
-  const event = {
+  const baseEvent = {
     eventId: 'event-1',
     notificationId: 'notification-1',
     tenantId: 'demo-tenant',
-    channel: 'EMAIL' as const,
-    recipient: 'user@example.com',
+    recipient: 'https://webhook.site/some-id',
     payload: { subject: 'hi' },
     createdAt: '2024-01-01T00:00:00.000Z',
   };
@@ -34,17 +33,17 @@ describe('EmailController', () => {
   beforeEach(async () => {
     prisma.notification.findUnique.mockReset();
     prisma.notification.update.mockReset();
-    emailService.sendEmail.mockReset();
+    webhookService.sendWebhook.mockReset();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        EmailController,
+        WebhookController,
         { provide: PrismaService, useValue: prisma },
-        { provide: EmailService, useValue: emailService },
+        { provide: WebhookService, useValue: webhookService },
       ],
     }).compile();
 
-    controller = module.get<EmailController>(EmailController);
+    controller = module.get<WebhookController>(WebhookController);
   });
 
   it('should be defined', () => {
@@ -52,22 +51,28 @@ describe('EmailController', () => {
   });
 
   it('ignores events for other channels', async () => {
-    await controller.handleNotification({ ...event, channel: 'WEBHOOK' });
+    await controller.handleNotification({
+      ...baseEvent,
+      channel: 'EMAIL',
+    });
 
     expect(prisma.notification.findUnique).not.toHaveBeenCalled();
-    expect(emailService.sendEmail).not.toHaveBeenCalled();
+    expect(webhookService.sendWebhook).not.toHaveBeenCalled();
   });
 
-  it('sends the email and marks the notification DELIVERED', async () => {
+  it('sends the webhook and marks the notification DELIVERED', async () => {
     prisma.notification.findUnique.mockResolvedValue({ status: 'PENDING' });
     prisma.notification.update.mockResolvedValue({});
-    emailService.sendEmail.mockResolvedValue(undefined);
+    webhookService.sendWebhook.mockResolvedValue(undefined);
 
-    await controller.handleNotification(event);
+    await controller.handleNotification({
+      ...baseEvent,
+      channel: 'WEBHOOK',
+    });
 
-    expect(emailService.sendEmail).toHaveBeenCalledWith(
-      event.recipient,
-      event.payload,
+    expect(webhookService.sendWebhook).toHaveBeenCalledWith(
+      baseEvent.recipient,
+      baseEvent.payload,
     );
     expect(prisma.notification.update).toHaveBeenNthCalledWith(1, {
       where: { id: 'notification-1' },
@@ -82,18 +87,24 @@ describe('EmailController', () => {
   it('skips redelivered events for a notification that is already DELIVERED', async () => {
     prisma.notification.findUnique.mockResolvedValue({ status: 'DELIVERED' });
 
-    await controller.handleNotification(event);
+    await controller.handleNotification({
+      ...baseEvent,
+      channel: 'WEBHOOK',
+    });
 
-    expect(emailService.sendEmail).not.toHaveBeenCalled();
+    expect(webhookService.sendWebhook).not.toHaveBeenCalled();
     expect(prisma.notification.update).not.toHaveBeenCalled();
   });
 
   it('skips events for a notification that no longer exists', async () => {
     prisma.notification.findUnique.mockResolvedValue(null);
 
-    await controller.handleNotification(event);
+    await controller.handleNotification({
+      ...baseEvent,
+      channel: 'WEBHOOK',
+    });
 
-    expect(emailService.sendEmail).not.toHaveBeenCalled();
+    expect(webhookService.sendWebhook).not.toHaveBeenCalled();
     expect(prisma.notification.update).not.toHaveBeenCalled();
   });
 
@@ -103,15 +114,19 @@ describe('EmailController', () => {
       attempts: 2,
     });
     prisma.notification.update.mockResolvedValue({});
-    emailService.sendEmail.mockRejectedValue(new Error('smtp unreachable'));
+    webhookService.sendWebhook.mockRejectedValue(
+      new Error('webhook unreachable'),
+    );
 
-    await expect(controller.handleNotification(event)).resolves.toBeUndefined();
+    await expect(
+      controller.handleNotification({ ...baseEvent, channel: 'WEBHOOK' }),
+    ).resolves.toBeUndefined();
 
     expect(prisma.notification.update).toHaveBeenNthCalledWith(2, {
       where: { id: 'notification-1' },
       data: {
         status: 'RETRYING',
-        lastError: 'smtp unreachable',
+        lastError: 'webhook unreachable',
         nextRetryAt: expect.any(Date),
       },
     });
@@ -123,15 +138,19 @@ describe('EmailController', () => {
       attempts: 6,
     });
     prisma.notification.update.mockResolvedValue({});
-    emailService.sendEmail.mockRejectedValue(new Error('smtp unreachable'));
+    webhookService.sendWebhook.mockRejectedValue(
+      new Error('webhook unreachable'),
+    );
 
-    await expect(controller.handleNotification(event)).resolves.toBeUndefined();
+    await expect(
+      controller.handleNotification({ ...baseEvent, channel: 'WEBHOOK' }),
+    ).resolves.toBeUndefined();
 
     expect(prisma.notification.update).toHaveBeenNthCalledWith(2, {
       where: { id: 'notification-1' },
       data: {
         status: 'FAILED',
-        lastError: 'smtp unreachable',
+        lastError: 'webhook unreachable',
         nextRetryAt: null,
       },
     });
@@ -143,8 +162,12 @@ describe('EmailController', () => {
       attempts: 6,
     });
     prisma.notification.update.mockRejectedValue(new Error('db unavailable'));
-    emailService.sendEmail.mockRejectedValue(new Error('smtp unreachable'));
+    webhookService.sendWebhook.mockRejectedValue(
+      new Error('webhook unreachable'),
+    );
 
-    await expect(controller.handleNotification(event)).resolves.toBeUndefined();
+    await expect(
+      controller.handleNotification({ ...baseEvent, channel: 'WEBHOOK' }),
+    ).resolves.toBeUndefined();
   });
 });
