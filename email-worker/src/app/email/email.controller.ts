@@ -73,24 +73,71 @@ export class EmailController {
 
       this.logger.error(`Failed notification ${notificationId}: ${message}`);
 
-      // Za sada NE bacamo exception i ne postavljamo nextRetryAt.
-      // Retry mehanizam ćemo napraviti kao sledeću fazu.
-      await this.prisma.notification
-        .update({
-          where: {
-            id: notificationId,
-          },
-          data: {
-            status: 'FAILED',
-            lastError: message,
-          },
-        })
-        .catch((updateError) => {
-          this.logger.error(
-            `Failed to record failure for notification ${notificationId}`,
-            updateError instanceof Error ? updateError.stack : updateError,
-          );
-        });
+      await this.recordFailure(notificationId, message).catch((updateError) => {
+        this.logger.error(
+          `Failed to record failure for notification ${notificationId}`,
+          updateError instanceof Error ? updateError.stack : updateError,
+        );
+      });
     }
+  }
+
+  private async recordFailure(
+    notificationId: string,
+    message: string,
+  ): Promise<void> {
+    const current = await this.prisma.notification.findUnique({
+      where: {
+        id: notificationId,
+      },
+      select: {
+        attempts: true,
+      },
+    });
+
+    if (!current) {
+      this.logger.warn(
+        `Notification ${notificationId} not found while recording failure, skipping`,
+      );
+      return;
+    }
+
+    const attemptIndex = current.attempts - 1;
+
+    if (attemptIndex < 5) {
+      const baseDelay = Math.pow(2, attemptIndex) * 1000;
+      const jitter = Math.floor(Math.random() * 500);
+      const nextRetryAt = new Date(Date.now() + baseDelay + jitter);
+
+      await this.prisma.notification.update({
+        where: {
+          id: notificationId,
+        },
+        data: {
+          status: 'RETRYING',
+          lastError: message,
+          nextRetryAt,
+        },
+      });
+
+      this.logger.warn(
+        `Notification ${notificationId} scheduled for retry at ${nextRetryAt.toISOString()}`,
+      );
+
+      return;
+    }
+
+    await this.prisma.notification.update({
+      where: {
+        id: notificationId,
+      },
+      data: {
+        status: 'FAILED',
+        lastError: message,
+        nextRetryAt: null,
+      },
+    });
+
+    this.logger.error(`Notification ${notificationId} permanently failed`);
   }
 }

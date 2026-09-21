@@ -1,9 +1,20 @@
 services:
+  kafka-data-init:
+    image: busybox
+    command: ['sh', '-c', 'chown -R 1000:1000 /data']
+    volumes:
+      - kafka-data:/data
+
   kafka:
     image: apache/kafka:4.3.1
     container_name: notification-kafka
+    depends_on:
+      kafka-data-init:
+        condition: service_completed_successfully
     ports:
       - '9092:9092'
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
 
   mailpit:
     image: axllent/mailpit:latest
@@ -11,3 +22,6 @@ services:
     ports:
       - '1025:1025'
       - '8025:8025'
+
+volumes:
+  kafka-data:
