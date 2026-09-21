@@ -29,6 +29,12 @@
     },
     {
       "path": "./retry-scheduler"
+    },
+    {
+      "path": "./webhook-worker-e2e"
+    },
+    {
+      "path": "./webhook-worker"
     }
   ],
   "compilerOptions": {}
