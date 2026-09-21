@@ -23,6 +23,12 @@
     },
     {
       "path": "./email-worker"
+    },
+    {
+      "path": "./retry-scheduler-e2e"
+    },
+    {
+      "path": "./retry-scheduler"
     }
   ],
   "compilerOptions": {}
