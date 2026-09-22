@@ -51,6 +51,13 @@ describe('EmailController', () => {
     expect(controller).toBeDefined();
   });
 
+  it('ignores events for other channels', async () => {
+    await controller.handleNotification({ ...event, channel: 'WEBHOOK' });
+
+    expect(prisma.notification.findUnique).not.toHaveBeenCalled();
+    expect(emailService.sendEmail).not.toHaveBeenCalled();
+  });
+
   it('sends the email and marks the notification DELIVERED', async () => {
     prisma.notification.findUnique.mockResolvedValue({ status: 'PENDING' });
     prisma.notification.update.mockResolvedValue({});
