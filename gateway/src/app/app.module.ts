@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from '@org/database';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OutboxModule } from './outbox/outbox.module';
+import { RedisModule } from '@org/redis';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { OutboxModule } from './outbox/outbox.module';
     }),
     DatabaseModule,
     NotificationsModule,
+    RedisModule,
     OutboxModule,
   ],
   controllers: [AppController],

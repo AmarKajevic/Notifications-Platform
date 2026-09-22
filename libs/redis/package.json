@@ -16,6 +16,8 @@
     }
   },
   "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "ioredis": "^6.0.0",
     "tslib": "^2.3.0"
   }
 }

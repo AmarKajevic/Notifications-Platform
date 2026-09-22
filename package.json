@@ -50,6 +50,7 @@
     "@org/contracts": "workspace:*",
     "@org/database": "workspace:*",
     "@org/kafka": "workspace:*",
+    "@org/redis": "workspace:*",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "axios": "^1.6.0",
