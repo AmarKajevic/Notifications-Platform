@@ -51,12 +51,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": [
-        "gateway-e2e/**/*",
-        "email-worker-e2e/**/*",
-        "retry-scheduler-e2e/**/*",
-        "webhook-worker-e2e/**/*"
-      ]
+      "exclude": ["gateway-e2e/**/*", "email-worker-e2e/**/*"]
     }
   ],
   "nxCloudId": "6aa9cf46ec4f6ebfca0919d5",

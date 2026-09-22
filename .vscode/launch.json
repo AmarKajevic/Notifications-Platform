@@ -36,42 +36,6 @@
         "${workspaceFolder}/email-worker/dist/**/*.(m|c|)js",
         "!**/node_modules/**"
       ]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug @org/retry-scheduler with Nx",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@org/retry-scheduler"],
-      "env": {
-        "NODE_OPTIONS": "--inspect=9231"
-      },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "outFiles": [
-        "${workspaceFolder}/retry-scheduler/dist/**/*.(m|c|)js",
-        "!**/node_modules/**"
-      ]
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Debug @org/webhook-worker with Nx",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "nx", "serve", "@org/webhook-worker"],
-      "env": {
-        "NODE_OPTIONS": "--inspect=9232"
-      },
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
-      "sourceMaps": true,
-      "outFiles": [
-        "${workspaceFolder}/webhook-worker/dist/**/*.(m|c|)js",
-        "!**/node_modules/**"
-      ]
     }
   ]
 }
