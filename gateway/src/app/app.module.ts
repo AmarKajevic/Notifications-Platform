@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from '@org/database';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OutboxModule } from './outbox/outbox.module';
+import { RateLimitModule } from './notifications/rate-limit/rate-limit.module';
 import { RedisModule } from '@org/redis';
 
 @Module({
@@ -15,6 +16,7 @@ import { RedisModule } from '@org/redis';
     DatabaseModule,
     NotificationsModule,
     RedisModule,
+    RateLimitModule,
     OutboxModule,
   ],
   controllers: [AppController],

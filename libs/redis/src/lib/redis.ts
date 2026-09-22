@@ -34,6 +34,10 @@ export class RedisService implements OnModuleDestroy {
     return result === 'OK';
   }
 
+  async delete(key: string): Promise<void> {
+    await this.client.del(key);
+  }
+
   async increment(key: string): Promise<number> {
     return this.client.incr(key);
   }
