@@ -36,17 +36,17 @@ The gateway never talks to Kafka on the request path. It writes the `Notificatio
 
 ## Current status
 
-| Phase | Scope                                                                  | Status  |
-| ----- | ---------------------------------------------------------------------- | ------- |
-| 0     | Local infra (Docker Compose: Kafka, Redis, Mailpit; Postgres)          | ✅      |
-| 1     | Gateway API + transactional outbox + relay                             | ✅      |
-| 2     | `email-worker` + retries with exponential backoff (`retry-scheduler`)  | ✅      |
-| 3     | `webhook-worker`, Redis idempotency keys, rate limiting                | ✅      |
-| 4     | Containerize all services (Dockerfile per service, full-stack compose) | ✅      |
-| 5     | Kubernetes (Helm chart, health probes, resource limits)                | 🔜 next |
-| 6     | Autoscaling with KEDA (scale workers on queue depth)                   | planned |
-| 7     | Observability (Prometheus + Grafana)                                   | planned |
-| 8     | CI/CD (GitHub Actions build/push/deploy)                               | planned |
+| Phase | Scope                                                                         | Status  |
+| ----- | ----------------------------------------------------------------------------- | ------- |
+| 0     | Local infra (Docker Compose: Kafka, Redis, Mailpit; Postgres)                 | ✅      |
+| 1     | Gateway API + transactional outbox + relay                                    | ✅      |
+| 2     | `email-worker` + retries with exponential backoff (`retry-scheduler`)         | ✅      |
+| 3     | `webhook-worker`, Redis idempotency keys, rate limiting                       | ✅      |
+| 4     | Containerize all services (Dockerfiles, full-stack compose, health endpoints) | ✅      |
+| 5     | Kubernetes (Helm chart, health probes, resource limits)                       | 🔜 next |
+| 6     | Autoscaling with KEDA (scale workers on queue depth)                          | planned |
+| 7     | Observability (Prometheus + Grafana)                                          | planned |
+| 8     | CI/CD (GitHub Actions build/push/deploy)                                      | planned |
 
 ## How a notification flows
 
@@ -174,15 +174,37 @@ If a worker crashes on its very first start with `This server does not host this
 
 ## Configuration
 
-| Variable        | Used by               | Default / example                               |
-| --------------- | --------------------- | ----------------------------------------------- |
-| `DATABASE_URL`  | all services          | `postgresql://user:password@host:5432/database` |
-| `KAFKA_BROKERS` | gateway, both workers | `localhost:9092` (comma-separated)              |
-| `REDIS_URL`     | gateway               | `redis://localhost:6379`                        |
-| `SMTP_HOST`     | email-worker          | `localhost`                                     |
-| `SMTP_PORT`     | email-worker          | `1025`                                          |
-| `SMTP_FROM`     | email-worker          | `notifications@local.test`                      |
-| `PORT`          | gateway               | `3000`                                          |
+| Variable        | Used by               | Default / example                                            |
+| --------------- | --------------------- | ------------------------------------------------------------ |
+| `DATABASE_URL`  | all services          | `postgresql://user:password@host:5432/database`              |
+| `KAFKA_BROKERS` | gateway, both workers | `localhost:9092` (comma-separated)                           |
+| `REDIS_URL`     | gateway               | `redis://localhost:6379`                                     |
+| `SMTP_HOST`     | email-worker          | `localhost`                                                  |
+| `SMTP_PORT`     | email-worker          | `1025`                                                       |
+| `SMTP_FROM`     | email-worker          | `notifications@local.test`                                   |
+| `PORT`          | gateway               | `3000`                                                       |
+| `HEALTH_PORT`   | workers, scheduler    | `3001` / `3002` / `3003` (email / webhook / retry-scheduler) |
+
+## Health checks
+
+Every service exposes a liveness and a readiness endpoint, intended for Kubernetes probes (and used by the `healthcheck` blocks in `docker-compose.prod.yml`). The workers and the scheduler have no public API, so they run a small HTTP listener on `HEALTH_PORT` purely for this.
+
+| Service           | Liveness                                    | Readiness (`503` + JSON detail when failing)                | Port |
+| ----------------- | ------------------------------------------- | ----------------------------------------------------------- | ---- |
+| `gateway`         | `GET /api/health`                           | `GET /api/ready` — Postgres and Redis reachable             | 3000 |
+| `email-worker`    | `GET /health`                               | `GET /ready` — Kafka consumer joined its group, Postgres up | 3001 |
+| `webhook-worker`  | `GET /health`                               | `GET /ready` — Kafka consumer joined its group, Postgres up | 3002 |
+| `retry-scheduler` | `GET /health` — cron ticked in the last 30s | `GET /ready` — Postgres reachable                           | 3003 |
+
+Two deliberate choices:
+
+- **Liveness never checks external dependencies.** Restarting a pod can't fix a database outage, and doing it anyway would turn one outage into a crash loop across every service.
+- **The gateway's readiness does not include Kafka.** The outbox exists so requests keep being accepted while the broker is down; taking the gateway out of rotation for that would defeat the point.
+
+```sh
+curl http://localhost:3000/api/ready
+# {"status":"ok","checks":{"database":"up","redis":"up"}}
+```
 
 ## Project structure
 
@@ -206,6 +228,6 @@ pnpm nx run-many -t lint,typecheck,test,build
 
 ## Known limitations
 
-- **No health endpoints yet** — required for Kubernetes probes (Phase 5). Workers and the scheduler have no HTTP server today.
+- **Worker readiness is set once, at startup.** A worker reports ready after its Kafka consumer first joins the group; if kafkajs later loses the connection and restarts the consumer internally, `/ready` doesn't flip back. Consumer lag (Phase 6) is the better signal for a stuck consumer.
 - **Single hardcoded tenant** (`demo-tenant`); there is no authentication, so rate limiting and idempotency keys are scoped to that one tenant.
 - **Docker images are large (~800 MB).** Each ships the whole workspace `node_modules` (dev dependencies pruned) instead of a per-service minimal install. Nx's `prune` target could shrink the three workers, but `gateway` has no `package.json` of its own, so it can't use it without first becoming a proper workspace package.

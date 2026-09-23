@@ -46,6 +46,24 @@ export class RedisService implements OnModuleDestroy {
     await this.client.expire(key, ttlSeconds);
   }
 
+  // ioredis queues commands while disconnected, so without a bound a Redis
+  // outage would hang the health probe instead of failing it.
+  async ping(timeoutMs = 2000): Promise<void> {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`Redis ping timed out after ${timeoutMs}ms`)),
+        timeoutMs,
+      );
+    });
+
+    try {
+      await Promise.race([this.client.ping(), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.client.quit();
   }

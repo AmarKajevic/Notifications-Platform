@@ -7,6 +7,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OutboxModule } from './outbox/outbox.module';
 import { RateLimitModule } from './notifications/rate-limit/rate-limit.module';
 import { RedisModule } from '@org/redis';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { RedisModule } from '@org/redis';
     RateLimitModule,
     OutboxModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

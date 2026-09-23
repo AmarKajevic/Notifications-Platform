@@ -7,10 +7,20 @@ import { PrismaService } from '@org/database';
 export class RetryService {
   private readonly logger = new Logger(RetryService.name);
 
+  private lastTickAtMs = Date.now();
+
   constructor(private readonly prisma: PrismaService) {}
+
+  // When the cron last fired (not when it last succeeded). Used by the
+  // liveness probe to notice a scheduler that has silently stopped ticking.
+  get lastTickAt(): number {
+    return this.lastTickAtMs;
+  }
 
   @Cron('*/2 * * * * *')
   async processRetries(): Promise<void> {
+    this.lastTickAtMs = Date.now();
+
     const notifications = await this.prisma.notification.findMany({
       where: {
         status: 'RETRYING',
