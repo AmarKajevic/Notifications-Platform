@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.github
+.vscode
+.env
+.env.*
+coverage
+*.log
+Dockerfile*
+docker-compose*.yml
+
+# AI tooling / skills — irrelevant to the build, just adds Nx crawl overhead
+.agents
+.claude
+.windsurf
+skills-lock.json
