@@ -1,43 +1,29 @@
 import 'dotenv/config';
 
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { MicroserviceOptions } from '@nestjs/microservices';
+import { createKafkaConsumerOptions } from '@org/kafka';
 
 import { AppModule } from './app/app.module';
-
-function getKafkaBrokers(): string[] {
-  const brokers = process.env.KAFKA_BROKERS;
-
-  if (!brokers) {
-    throw new Error('KAFKA_BROKERS is not defined');
-  }
-
-  return brokers.split(',');
-}
+import { HealthState } from './app/health/health.state';
 
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AppModule,
-    {
-      transport: Transport.KAFKA,
-      options: {
-        client: {
-          clientId: 'email-worker',
-          brokers: getKafkaBrokers(),
-        },
+  // Hybrid app: the Kafka consumer does the real work, and a small HTTP
+  // listener exists only so orchestrators can probe /health and /ready.
+  const app = await NestFactory.create(AppModule);
 
-        consumer: {
-          groupId: 'email-worker-group',
-        },
-
-        subscribe: {
-          fromBeginning: true,
-        },
-      },
-    },
+  app.connectMicroservice<MicroserviceOptions>(
+    createKafkaConsumerOptions({
+      clientId: 'email-worker',
+      groupId: 'email-worker-group',
+    }),
   );
 
-  await app.listen();
+  // Listen first so /health answers while the consumer is still connecting
+  // (/ready stays 503 until it has joined the group).
+  await app.listen(process.env.HEALTH_PORT ?? 3001);
+  await app.startAllMicroservices();
+  app.get(HealthState).markConsumerReady();
 }
 
 bootstrap();

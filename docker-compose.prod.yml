@@ -106,6 +106,13 @@ services:
       REDIS_URL: redis://redis:6379
       PORT: '3000'
     restart: on-failure
+    # /api/ready = can this instance take a POST (Postgres + Redis reachable).
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3000/api/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       kafka-topics-init:
         condition: service_completed_successfully
@@ -123,7 +130,15 @@ services:
       SMTP_HOST: mailpit
       SMTP_PORT: '1025'
       SMTP_FROM: notifications@local.test
+      HEALTH_PORT: '3001'
     restart: on-failure
+    # /ready = Kafka consumer joined its group and Postgres answers.
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3001/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       kafka-topics-init:
         condition: service_completed_successfully
@@ -136,7 +151,14 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       KAFKA_BROKERS: kafka:19092
+      HEALTH_PORT: '3002'
     restart: on-failure
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3002/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       kafka-topics-init:
         condition: service_completed_successfully
@@ -147,8 +169,20 @@ services:
       dockerfile: retry-scheduler/Dockerfile
     container_name: notification-retry-scheduler
     restart: on-failure
+    # /health = the cron is still ticking; /ready = Postgres answers.
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO /dev/null http://127.0.0.1:3003/health && wget -qO /dev/null http://127.0.0.1:3003/ready',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      HEALTH_PORT: '3003'
 
 volumes:
   kafka-data:
