@@ -32,6 +32,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/libs ./libs
+# email-worker is a real pnpm workspace member, so its own dependencies are
+# symlinked from email-worker/node_modules (into the shared .pnpm store above)
+# and not from the root node_modules.
+COPY --from=build /app/email-worker/node_modules ./email-worker/node_modules
 COPY --from=build /app/email-worker/dist ./email-worker/dist
 COPY --from=build /app/package.json ./package.json
 
