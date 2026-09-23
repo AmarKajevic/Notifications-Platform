@@ -22,6 +22,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/libs ./libs
+# See email-worker/Dockerfile: workspace members resolve their own deps from
+# <member>/node_modules, which has to ship alongside the shared .pnpm store.
+COPY --from=build /app/retry-scheduler/node_modules ./retry-scheduler/node_modules
 COPY --from=build /app/retry-scheduler/dist ./retry-scheduler/dist
 COPY --from=build /app/package.json ./package.json
 
