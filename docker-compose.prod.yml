@@ -1,0 +1,116 @@
+# Full containerized stack: infra + all 4 app services, each built from its
+# own Dockerfile (see gateway/Dockerfile, email-worker/Dockerfile, etc).
+#
+# Run with:
+#   docker compose -f docker-compose.prod.yml up --build
+#
+# DATABASE_URL is read from the repo's .env file (Compose loads .env
+# automatically) since it's a real, reachable Postgres (Supabase) either way.
+# KAFKA_BROKERS / REDIS_URL / SMTP_HOST are NOT read from .env — those point
+# at "localhost" there, which is only correct for services running on your
+# host machine (`pnpm nx serve ...`). Inside this network, containers reach
+# each other by service name, so those are hardcoded below instead.
+#
+# Don't run this alongside the dev docker-compose.yml — both use the same
+# container names and ports.
+
+services:
+  kafka-data-init:
+    image: busybox
+    command: ['sh', '-c', 'chown -R 1000:1000 /data']
+    volumes:
+      - kafka-data:/data
+
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: notification-kafka
+    depends_on:
+      kafka-data-init:
+        condition: service_completed_successfully
+    ports:
+      - '9092:9092'
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          '/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: notification-mailpit
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+  redis:
+    image: redis:7-alpine
+    container_name: notification-redis
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: notification-gateway
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      KAFKA_BROKERS: kafka:9092
+      REDIS_URL: redis://redis:6379
+      PORT: '3000'
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  email-worker:
+    build:
+      context: .
+      dockerfile: email-worker/Dockerfile
+    container_name: notification-email-worker
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      KAFKA_BROKERS: kafka:9092
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      SMTP_FROM: notifications@local.test
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  webhook-worker:
+    build:
+      context: .
+      dockerfile: webhook-worker/Dockerfile
+    container_name: notification-webhook-worker
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  retry-scheduler:
+    build:
+      context: .
+      dockerfile: retry-scheduler/Dockerfile
+    container_name: notification-retry-scheduler
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+
+volumes:
+  kafka-data:
