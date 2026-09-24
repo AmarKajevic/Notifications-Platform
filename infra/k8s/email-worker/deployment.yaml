@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: email-worker
+  namespace: notification-platform
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: email-worker
+
+  template:
+    metadata:
+      labels:
+        app: email-worker
+
+    spec:
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: email-worker
+
+          image: notification-email-worker:local
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 3001
+
+          envFrom:
+            - configMapRef:
+                name: notification-config
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: notification-secrets
+                  key: DATABASE_URL
+
+            - name: HEALTH_PORT
+              value: '3001'
+
+          resources:
+            requests:
+              cpu: '100m'
+              memory: '128Mi'
+
+            limits:
+              cpu: '500m'
+              memory: '512Mi'
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
