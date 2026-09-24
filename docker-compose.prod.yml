@@ -106,9 +106,13 @@ services:
       REDIS_URL: redis://redis:6379
       PORT: '3000'
     restart: on-failure
-    # /api/ready = can this instance take a POST (Postgres + Redis reachable).
+    # /api/health/ready = can this instance take a POST (Postgres + Redis reachable).
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3000/api/ready']
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO /dev/null http://127.0.0.1:3000/api/health/ready',
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
