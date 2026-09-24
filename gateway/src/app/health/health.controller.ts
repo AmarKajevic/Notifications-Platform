@@ -4,24 +4,26 @@ import { RedisService } from '@org/redis';
 
 type CheckResult = 'up' | 'down';
 
-@Controller()
+@Controller('health')
 export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
   ) {}
 
-  // Liveness: the process is running and serving HTTP. Deliberately checks no
-  // external dependency — restarting the pod can't fix a database outage.
-  @Get('health')
+  // Liveness: only checks whether the process is alive.
+  @Get()
   live(): { status: 'ok' } {
     return { status: 'ok' };
   }
 
-  // Readiness: can this instance actually take a POST /notifications?
-  // Needs Postgres (writes) and Redis (rate limit + idempotency). Kafka is
-  // intentionally not checked: the outbox exists so requests keep being
-  // accepted while the broker is down.
+  // Explicit liveness endpoint for Kubernetes.
+  @Get('live')
+  liveness(): { status: 'ok' } {
+    return { status: 'ok' };
+  }
+
+  // Readiness: checks whether this instance can handle requests.
   @Get('ready')
   async ready(): Promise<{
     status: 'ok';
@@ -31,13 +33,23 @@ export class HealthController {
       this.prisma.ping().then(up, down),
       this.redis.ping().then(up, down),
     ]);
-    const checks = { database, redis };
+
+    const checks = {
+      database,
+      redis,
+    };
 
     if (database === 'down' || redis === 'down') {
-      throw new ServiceUnavailableException({ status: 'unavailable', checks });
+      throw new ServiceUnavailableException({
+        status: 'unavailable',
+        checks,
+      });
     }
 
-    return { status: 'ok', checks };
+    return {
+      status: 'ok',
+      checks,
+    };
   }
 }
 

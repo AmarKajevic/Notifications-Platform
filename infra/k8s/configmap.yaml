@@ -4,8 +4,8 @@ metadata:
   name: notification-config
   namespace: notification-platform
 data:
-  KAFKA_BROKERS: "kafka:9092"
-  REDIS_URL: "redis://redis:6379"
-  SMTP_HOST: "mailpit"
-  SMTP_PORT: "1025"
-  SMTP_FROM: "notifications@local.test"
+  KAFKA_BROKERS: 'kafka:9092'
+  REDIS_URL: 'redis://redis:6379'
+  SMTP_HOST: 'mailpit'
+  SMTP_PORT: '1025'
+  SMTP_FROM: 'notifications@local.test'

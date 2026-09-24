@@ -26,12 +26,12 @@ spec:
 
           resources:
             requests:
-              cpu: "50m"
-              memory: "64Mi"
+              cpu: '50m'
+              memory: '64Mi'
 
             limits:
-              cpu: "250m"
-              memory: "256Mi"
+              cpu: '250m'
+              memory: '256Mi'
 
           readinessProbe:
             exec:

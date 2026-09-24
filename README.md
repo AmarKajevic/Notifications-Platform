@@ -191,7 +191,7 @@ Every service exposes a liveness and a readiness endpoint, intended for Kubernet
 
 | Service           | Liveness                                    | Readiness (`503` + JSON detail when failing)                | Port |
 | ----------------- | ------------------------------------------- | ----------------------------------------------------------- | ---- |
-| `gateway`         | `GET /api/health`                           | `GET /api/ready` — Postgres and Redis reachable             | 3000 |
+| `gateway`         | `GET /api/health`                           | `GET /api/health/ready` — Postgres and Redis reachable      | 3000 |
 | `email-worker`    | `GET /health`                               | `GET /ready` — Kafka consumer joined its group, Postgres up | 3001 |
 | `webhook-worker`  | `GET /health`                               | `GET /ready` — Kafka consumer joined its group, Postgres up | 3002 |
 | `retry-scheduler` | `GET /health` — cron ticked in the last 30s | `GET /ready` — Postgres reachable                           | 3003 |
@@ -202,7 +202,7 @@ Two deliberate choices:
 - **The gateway's readiness does not include Kafka.** The outbox exists so requests keep being accepted while the broker is down; taking the gateway out of rotation for that would defeat the point.
 
 ```sh
-curl http://localhost:3000/api/ready
+curl http://localhost:3000/api/health/ready
 # {"status":"ok","checks":{"database":"up","redis":"up"}}
 ```
 
