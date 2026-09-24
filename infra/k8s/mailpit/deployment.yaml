@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+  namespace: notification-platform
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: mailpit
+
+  template:
+    metadata:
+      labels:
+        app: mailpit
+
+    spec:
+      containers:
+        - name: mailpit
+          image: axllent/mailpit:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: smtp
+              containerPort: 1025
+
+            - name: http
+              containerPort: 8025
+
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "32Mi"
+
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8025
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8025
+            periodSeconds: 10
