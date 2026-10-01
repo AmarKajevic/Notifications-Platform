@@ -1,0 +1,30 @@
+# Creates the topic up front. Otherwise it only comes into existence on the
+# first metadata request, which fails with UNKNOWN_TOPIC_OR_PARTITION — and a
+# worker whose consumer starts before that crashes on the uncaught error.
+# Mirrors kafka-topics-init in docker-compose.prod.yml.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topics-init
+  namespace: notification-platform
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-topics-init
+          image: apache/kafka:4.3.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - /opt/kafka/bin/kafka-topics.sh
+            - --bootstrap-server
+            - kafka:9092
+            - --create
+            - --if-not-exists
+            - --topic
+            - notification.requested
+            - --partitions
+            - '6'
+            - --replication-factor
+            - '1'
