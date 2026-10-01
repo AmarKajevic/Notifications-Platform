@@ -17,6 +17,14 @@ spec:
         app: kafka
 
     spec:
+      # The image runs as uid/gid 1000 (appuser). PVCs are mounted root-owned
+      # by default, so without fsGroup the first write to kafka-data fails
+      # with AccessDeniedException — the same permission issue we hit in
+      # docker-compose, fixed there with a busybox chown init container.
+      # Kubernetes has a native mechanism for this instead.
+      securityContext:
+        fsGroup: 1000
+
       containers:
         - name: kafka
           image: apache/kafka:4.3.1
@@ -69,6 +77,16 @@ spec:
             - name: KAFKA_NUM_PARTITIONS
               value: '6'
 
+            # The image's default log.dirs is /tmp/kraft-combined-logs, which
+            # is NOT where kafka-data is mounted below. Without this, every
+            # pod restart silently loses all data even though the PVC exists.
+            - name: KAFKA_LOG_DIRS
+              value: '/var/lib/kafka/data'
+
+          volumeMounts:
+            - name: kafka-data
+              mountPath: /var/lib/kafka/data
+
           resources:
             requests:
               cpu: '250m'
@@ -94,3 +112,15 @@ spec:
             tcpSocket:
               port: 9092
             periodSeconds: 20
+
+  volumeClaimTemplates:
+    - metadata:
+        name: kafka-data
+
+      spec:
+        accessModes:
+          - ReadWriteOnce
+
+        resources:
+          requests:
+            storage: 2Gi
