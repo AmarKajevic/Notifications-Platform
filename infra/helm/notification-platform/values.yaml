@@ -1,0 +1,131 @@
+nameOverride: ''
+fullnameOverride: ''
+
+images:
+  gateway:
+    repository: notification-gateway
+    tag: local
+    pullPolicy: Never
+
+  emailWorker:
+    repository: notification-email-worker
+    tag: local
+    pullPolicy: Never
+
+  webhookWorker:
+    repository: notification-webhook-worker
+    tag: local
+    pullPolicy: Never
+
+  retryScheduler:
+    repository: notification-retry-scheduler
+    tag: local
+    pullPolicy: Never
+
+kafka:
+  image:
+    repository: apache/kafka
+    tag: '4.3.1'
+    pullPolicy: IfNotPresent
+
+  replicas: 1
+
+  storage:
+    size: 2Gi
+    storageClass: standard
+
+  service:
+    clientPort: 9092
+    controllerPort: 9093
+
+  topic:
+    name: notification.requested
+    partitions: 6
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: '1'
+      memory: 1Gi
+
+redis:
+  image:
+    repository: redis
+    tag: '7-alpine'
+    pullPolicy: IfNotPresent
+
+  replicas: 1
+  port: 6379
+
+mailpit:
+  image:
+    repository: axllent/mailpit
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  replicas: 1
+
+  smtpPort: 1025
+  httpPort: 8025
+
+gateway:
+  replicas: 1
+  port: 3000
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+emailWorker:
+  replicas: 1
+  port: 3001
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+webhookWorker:
+  replicas: 1
+  port: 3002
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+retryScheduler:
+  replicas: 1
+  port: 3003
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+config:
+  kafkaBrokers: kafka:9092
+  redisUrl: redis://redis:6379
+
+  smtp:
+    host: mailpit
+    port: '1025'
+    from: notifications@local.test
+
+existingSecret:
+  name: notification-secrets
