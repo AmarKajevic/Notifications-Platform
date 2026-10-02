@@ -4,3 +4,10 @@
 /.nx/cache
 /.nx/workspace-data
 .nx/self-healing
+
+# Helm template YAML embeds Go template syntax ({{ ... }}), which isn't
+# valid YAML on its own — Prettier's parser throws on it (not just reformats
+# it), which fails the whole `nx format:check` run across every file in a
+# single batch, not just these. `helm lint` / `helm template` validate these
+# instead. Chart.yaml and values.yaml are plain YAML and stay formatted.
+infra/helm/**/templates/**
