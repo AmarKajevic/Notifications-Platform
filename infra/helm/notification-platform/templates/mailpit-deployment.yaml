@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+  labels:
+    {{- include "notification-platform.labels" . | nindent 4 }}
+    app: mailpit
+spec:
+  replicas: {{ .Values.mailpit.replicas }}
+  selector:
+    matchLabels:
+      app: mailpit
+  template:
+    metadata:
+      labels:
+        {{- include "notification-platform.selectorLabels" . | nindent 8 }}
+        app: mailpit
+    spec:
+      containers:
+        - name: mailpit
+          image: "{{ .Values.mailpit.image.repository }}:{{ .Values.mailpit.image.tag }}"
+          imagePullPolicy: {{ .Values.mailpit.image.pullPolicy }}
+          ports:
+            - name: smtp
+              containerPort: {{ .Values.mailpit.smtpPort }}
+            - name: http
+              containerPort: {{ .Values.mailpit.httpPort }}
