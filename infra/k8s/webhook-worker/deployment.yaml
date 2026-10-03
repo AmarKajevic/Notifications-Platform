@@ -41,7 +41,7 @@ spec:
                   name: notification-secrets
                   key: DATABASE_URL
 
-            - name: WORKER_PORT
+            - name: HEALTH_PORT
               value: '3002'
 
           resources:
