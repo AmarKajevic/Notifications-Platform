@@ -21,7 +21,12 @@ spec:
     - type: kafka
       metadata:
         bootstrapServers: {{ .Values.config.kedaKafkaBrokers | quote }}
-        consumerGroup: email-worker-group
+        # NestJS's ServerKafka transport appends "-server" to the configured
+        # groupId automatically (see node_modules/@nestjs/microservices/server/
+        # server-kafka.js, `postfixId` default) — the real consumer group is
+        # NOT "email-worker-group" from main.ts, it's this. Confirmed live via
+        # `kafka-consumer-groups.sh --list`.
+        consumerGroup: email-worker-group-server
         topic: notification.requested
         lagThreshold: "10"
         activationLagThreshold: "1"
