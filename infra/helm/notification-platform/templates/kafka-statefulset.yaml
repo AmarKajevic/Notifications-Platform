@@ -47,7 +47,7 @@ spec:
               value: "PLAINTEXT://:9092,CONTROLLER://:9093"
 
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: "PLAINTEXT://kafka:9092"
+              value: {{ .Values.kafka.advertisedListener | quote }}
 
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
               value: "CONTROLLER"

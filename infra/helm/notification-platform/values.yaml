@@ -29,6 +29,7 @@ kafka:
     pullPolicy: IfNotPresent
 
   replicas: 1
+  advertisedListener: 'PLAINTEXT://kafka.notification-platform.svc.cluster.local:9092'
 
   storage:
     size: 2Gi
@@ -120,6 +121,7 @@ retryScheduler:
 
 config:
   kafkaBrokers: kafka:9092
+  kedaKafkaBrokers: kafka.notification-platform.svc.cluster.local:9092
   redisUrl: redis://redis:6379
 
   smtp:

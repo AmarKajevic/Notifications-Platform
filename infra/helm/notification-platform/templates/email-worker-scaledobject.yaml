@@ -1,0 +1,29 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: email-worker
+  labels:
+    {{- include "notification-platform.labels" . | nindent 4 }}
+
+spec:
+  scaleTargetRef:
+    name: email-worker
+
+  pollingInterval: 10
+
+  cooldownPeriod: 60
+
+  minReplicaCount: 1
+
+  maxReplicaCount: 6
+
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: {{ .Values.config.kedaKafkaBrokers | quote }}
+        consumerGroup: email-worker-group
+        topic: notification.requested
+        lagThreshold: "10"
+        activationLagThreshold: "1"
+        offsetResetPolicy: latest
+        allowIdleConsumers: "false"
