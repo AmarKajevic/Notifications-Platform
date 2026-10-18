@@ -1,7 +1,17 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import { NotificationStatus, Prisma, PrismaService } from '@org/database';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  NotificationChannel,
+  NotificationStatus,
+  Prisma,
+  PrismaService,
+} from '@org/database';
 import { RedisService } from '@org/redis';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { ListNotificationsQueryDto } from './dto/list-notifications.query.dto';
 import { NotificationRequestedEvent } from '@org/contracts';
 import { randomUUID } from 'node:crypto';
 import { RateLimitService } from './rate-limit/rate-limit.service';
@@ -201,5 +211,85 @@ export class NotificationsService {
       id: notification.id,
       status: notification.status,
     };
+  }
+
+  async findAll(query: ListNotificationsQueryDto): Promise<{
+    data: Array<{
+      id: string;
+      channel: NotificationChannel;
+      recipient: string;
+      status: NotificationStatus;
+      attempts: number;
+      lastError: string | null;
+      nextRetryAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    const where = {
+      tenantId: this.tenantId,
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.channel ? { channel: query.channel } : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+        select: {
+          id: true,
+          channel: true,
+          recipient: true,
+          status: true,
+          attempts: true,
+          lastError: true,
+          nextRetryAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return { data, total, page: query.page, pageSize: query.pageSize };
+  }
+
+  async findOne(id: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, tenantId: this.tenantId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException(`Notification ${id} not found`);
+    }
+
+    return notification;
+  }
+
+  async stats(): Promise<Record<NotificationStatus, number>> {
+    const grouped = await this.prisma.notification.groupBy({
+      by: ['status'],
+      where: { tenantId: this.tenantId },
+      _count: true,
+    });
+
+    const counts: Record<string, number> = {
+      PENDING: 0,
+      PROCESSING: 0,
+      RETRYING: 0,
+      DELIVERED: 0,
+      FAILED: 0,
+    };
+
+    for (const row of grouped) {
+      counts[row.status] = row._count;
+    }
+
+    return counts as Record<NotificationStatus, number>;
   }
 }

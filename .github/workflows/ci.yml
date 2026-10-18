@@ -31,4 +31,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: npx nx format:check --base="remotes/origin/main"
-      # - run: npx nx run-many -t lint test build typecheck e2e
+
+      # libs/database/src/generated/prisma is .gitignore'd (generated from
+      # prisma/schema.prisma), so every job needs this before build/typecheck
+      # can see it. Doesn't need DATABASE_URL or a reachable database — it
+      # only reads the schema file.
+      - run: npx prisma generate
+
+      # e2e is intentionally excluded: those projects need a live Postgres/
+      # Kafka/Redis stack (docker-compose.prod.yml), which this runner
+      # doesn't provide, and the generated e2e specs are still Nx boilerplate
+      # rather than real scenarios (see docs/DOKUMENTACIJA-PROJEKTA.md §6/§14).
+      - run: npx nx run-many -t lint test build typecheck

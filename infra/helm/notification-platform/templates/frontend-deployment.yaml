@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    {{- include "notification-platform.labels" . | nindent 4 }}
+    app: frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        {{- include "notification-platform.selectorLabels" . | nindent 8 }}
+        app: frontend
+
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.images.frontend.repository }}:{{ .Values.images.frontend.tag }}"
+          imagePullPolicy: {{ .Values.images.frontend.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.port }}
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
