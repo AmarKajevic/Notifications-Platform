@@ -22,6 +22,11 @@ images:
     tag: local
     pullPolicy: Never
 
+  frontend:
+    repository: notification-frontend
+    tag: local
+    pullPolicy: Never
+
 kafka:
   image:
     repository: apache/kafka
@@ -118,6 +123,18 @@ retryScheduler:
     limits:
       cpu: 500m
       memory: 512Mi
+
+frontend:
+  replicas: 1
+  port: 80
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
 
 config:
   kafkaBrokers: kafka:9092

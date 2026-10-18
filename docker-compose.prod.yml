@@ -188,5 +188,26 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       HEALTH_PORT: '3003'
 
+  # React admin dashboard. Static build served by nginx, which reverse-proxies
+  # /api/* to the gateway container by service name — see frontend/nginx.conf.
+  # No CORS, no build-time URL to configure: the browser only ever talks to
+  # this same origin (http://localhost:8080), whatever environment it's in.
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: notification-frontend
+    ports:
+      - '8080:80'
+    restart: on-failure
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:80/']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - gateway
+
 volumes:
   kafka-data:

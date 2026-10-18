@@ -14,6 +14,10 @@ ENV NX_DAEMON=false
 RUN corepack enable
 COPY . .
 RUN pnpm install --frozen-lockfile
+# See gateway/Dockerfile for why this is an explicit step, not a postinstall
+# hook — libs/database/src/generated/prisma is .gitignore'd and must exist
+# before the build below, and before prune removes the `prisma` CLI.
+RUN pnpm exec prisma generate
 RUN pnpm exec nx build webhook-worker
 RUN pnpm prune --prod
 

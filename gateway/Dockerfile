@@ -19,6 +19,13 @@ ENV NX_DAEMON=false
 RUN corepack enable
 COPY . .
 RUN pnpm install --frozen-lockfile
+# libs/database/src/generated/prisma is .gitignore'd, generated from
+# prisma/schema.prisma — there's no postinstall hook for this (one was tried
+# and reverted: it re-fires on `pnpm prune` below, by which point `prisma`
+# itself has already been pruned as a devDependency, breaking the prune
+# step). Explicit step instead, placed before the build that needs it and
+# before the prune that would remove the CLI.
+RUN pnpm exec prisma generate
 RUN pnpm exec nx build gateway
 RUN pnpm prune --prod
 
