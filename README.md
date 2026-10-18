@@ -2,7 +2,6 @@
 
 Event-driven notification delivery system. A gateway API accepts notification requests, persists them, and reliably hands them off to Kafka for asynchronous delivery by independent workers — built to demonstrate operating an event-driven system correctly (no lost events, no duplicate sends, automatic retries), not just wiring one up. A React dashboard (`frontend/`) sits on top for sending notifications and watching them move through their lifecycle, and the full stack runs the same way in Docker Compose, raw Kubernetes manifests, or a Helm chart with Kafka-lag-based autoscaling (KEDA).
 
-For a line-by-line walkthrough of every file and every design decision, see [docs/DOKUMENTACIJA-PROJEKTA.md](docs/DOKUMENTACIJA-PROJEKTA.md) (or [docs/PROJEKAT-OBJASNJENO.md](docs/PROJEKAT-OBJASNJENO.md) for a plain-language version, in Serbian).
 
 ## Architecture
 
